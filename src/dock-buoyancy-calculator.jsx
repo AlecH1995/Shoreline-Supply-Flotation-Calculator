@@ -1,5 +1,15 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 
+function useMobile() {
+  const [mobile, setMobile] = useState(typeof window !== "undefined" && window.innerWidth < 640);
+  useEffect(() => {
+    const handler = () => setMobile(window.innerWidth < 640);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return mobile;
+}
+
 const FLOAT_CATALOG = [
   { sku: "RP1412",   size: "12x48x12",  buoyancy: 207,  weight: 16,  depth: 12 },
   { sku: "RP2312",   size: "24x36x12",  buoyancy: 332,  weight: 21,  depth: 12 },
@@ -113,7 +123,7 @@ function ResultCard({ label, value, unit, color, highlight }) {
   return (
     <div style={{ background: highlight ? color : "#f8fafc", border: "1.5px solid " + (highlight ? color : "#e2e8f0"), borderRadius: 10, padding: "14px 16px", flex: "1 1 140px" }}>
       <div style={{ fontSize: 12, color: highlight ? "#fff" : C, fontWeight: 600, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: highlight ? "#fff" : C }}>
+      <div style={{ fontSize: 18, fontWeight: 700, color: highlight ? "#fff" : C }}>
         {value} <span style={{ fontSize: 13, fontWeight: 400 }}>{unit}</span>
       </div>
     </div>
@@ -302,6 +312,7 @@ export default function DockBuoyancyCalculator() {
   const [selectedDepth, setSelectedDepth] = useState(12);
   const [floatQty, setFloatQty] = useState({});
 
+  const isMobile = useMobile();
   const isSteel = frameType && FRAME_TYPES[frameType] ? FRAME_TYPES[frameType].isSteel : false;
 
   const handleSteelQty = (key, val) => setSteelQty(prev => ({ ...prev, [key]: val }));
@@ -366,18 +377,18 @@ export default function DockBuoyancyCalculator() {
   const subFloat = parseFloat(results.subPct);
 
   return (
-    <div style={{ fontFamily: "Inter, system-ui, sans-serif", background: "#f1f5f9", minHeight: "100vh", padding: "24px 16px" }}>
+    <div style={{ fontFamily: "Inter, system-ui, sans-serif", background: "#f1f5f9", minHeight: "100vh", padding: isMobile ? "16px 10px" : "24px 16px" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
 
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C }}>Shoreline Supply Flotation Calculator</div>
+          <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 800, color: C }}>Shoreline Supply Flotation Calculator</div>
           <p style={{ color: C, fontSize: 13, marginTop: 6 }}>Estimate float requirements and load capacity for your floating dock system.</p>
         </div>
 
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 320px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", gap: isMobile ? 12 : 20, flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 320px", minWidth: isMobile ? "100%" : 320, display: "flex", flexDirection: "column", gap: 12 }}>
 
-            <div style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Frame & Decking</h3>
               <SelectRow label="Frame Type" value={frameType} onChange={setFrameType} options={Object.keys(FRAME_TYPES)} />
               {!isSteel && frameType && FRAME_TYPES[frameType] && (
@@ -405,7 +416,7 @@ export default function DockBuoyancyCalculator() {
             </div>
 
             {(frameType === "Wood Framing" || frameType === "Aluminium Frame") && (
-              <div style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Dock Dimensions</h3>
                 <InputRow label="Length" value={length} onChange={setLength} unit="ft" min={4} max={200} />
                 <InputRow label="Width" value={width} onChange={setWidth} unit="ft" min={2} max={50} />
@@ -413,19 +424,19 @@ export default function DockBuoyancyCalculator() {
               </div>
             )}
 
-            <div style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Loads</h3>
               <InputRow label="Live Load" value={liveLoad} onChange={setLiveLoad} unit="lbs" min={0} note="total weight of people, permanent fixtures, equipment" />
               <InputRow label="Safety Factor" value={safetyFactor} onChange={setSafetyFactor} unit="x" min={1.5} max={4} step={0.1} note="typically 1.5-2.5" />
             </div>
 
-            <div style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               <h3 style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Permafloat Float System</h3>
               <p style={{ fontSize: 12, color: C, margin: "0 0 14px" }}>Select depth series, then enter quantity for each model.</p>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
                 {DEPTH_SERIES.map(d => (
                   <button key={d} onClick={() => setSelectedDepth(d)}
-                    style={{ padding: "5px 12px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer", border: "1.5px solid", background: selectedDepth === d ? C : "#f8fafc", color: selectedDepth === d ? "#fff" : C, borderColor: selectedDepth === d ? C : "#e2e8f0" }}>
+                    style={{ padding: isMobile ? "4px 8px" : "5px 12px", borderRadius: 20, fontSize: isMobile ? 11 : 13, fontWeight: 600, cursor: "pointer", border: "1.5px solid", background: selectedDepth === d ? C : "#f8fafc", color: selectedDepth === d ? "#fff" : C, borderColor: selectedDepth === d ? C : "#e2e8f0" }}>
                     {d}" Series
                   </button>
                 ))}
@@ -457,8 +468,8 @@ export default function DockBuoyancyCalculator() {
 
           </div>
 
-          <div style={{ flex: "1 1 280px" }}>
-            <div style={{ position: "sticky", top: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ flex: "1 1 280px", minWidth: isMobile ? "100%" : 280 }}>
+            <div style={{ position: isMobile ? "static" : "sticky", top: 20, display: "flex", flexDirection: "column", gap: 16 }}>
 
               <div style={{ background: statusBg, border: "2px solid " + statusColor, borderRadius: 14, padding: "16px 20px", textAlign: "center" }}>
                 <div style={{ fontSize: 28 }}>{results.statusOk ? "✅" : "⚠️"}</div>
@@ -472,7 +483,7 @@ export default function DockBuoyancyCalculator() {
                 </div>
               </div>
 
-              <div style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Load Summary</h3>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                   <ResultCard label="Frame Weight"      value={results.frameWeight.toLocaleString()}   unit="lbs" color="#6366f1" />
@@ -484,7 +495,7 @@ export default function DockBuoyancyCalculator() {
                 </div>
               </div>
 
-              <div style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Buoyancy Summary</h3>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                   <ResultCard label="Required Buoyancy" value={results.requiredBuoyancy.toLocaleString()} unit="lbs" color="#f97316" />
