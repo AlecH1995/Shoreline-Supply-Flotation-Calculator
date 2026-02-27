@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 function useMobile() {
   const [mobile, setMobile] = useState(typeof window !== "undefined" && window.innerWidth < 640);
@@ -182,123 +182,6 @@ function QtyPicker({ items, quantities, onChange, columns }) {
 }
 
 
-function AIAssistant({ results, frameType, deckingType, liveLoad, safetyFactor, floatTotals }) {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi! I am your Shoreline Supply flotation assistant. Ask me anything about float selection, buoyancy calculations, or your current dock configuration." }
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef(null);
-
-  useEffect(() => {
-    if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const getSystem = () => [
-    "You are a knowledgeable floating dock and marine flotation assistant for Shoreline Supply, a marine products company since 1956.",
-    "Help customers with float selection, buoyancy calculations, dock configuration, and product questions.",
-    "",
-    "Permafloat catalog (buoyancy in lbs):",
-    "12in: RP1412=207, RP2312=332, RP2412=454, RP3412=700, RP3612=1061, RP3812=1412, RP4412=940, RP4512=1186, RP4612=1420, RP4812=1900",
-    "16in: RP2316=446, RP2416=598, RP3416=925, RP3616=1402, RP3.5616=1636, RP3816=1870, RP4416=1242, RP4516=1568, RP4616=1880, RP4816=2518",
-    "18in: RP2418=652, RP3418=1004",
-    "20in: RP1420=334, RP2320=537, RP2420=731, RP3420=1132, RP3620=1718, RP3820=2295, RP4420=1522, RP4520=1923, RP4620=2307, RP4820=3092",
-    "24in: RP2424=882, RP3424=1364, RP3624=2072, RP3824=2771, RP4424=1836, RP4524=2320, RP4624=2786, RP4824=3737",
-    "32in: RP3632=2678, RP4632=4638, RP3832=3626, RP4832=4920",
-    "",
-    "Frame types: Wood Framing (4.0 lbs/ft2), Steel Truss Frame (manual sections), Aluminium Frame (2.5 lbs/ft2)",
-    "Decking: Composite (3.0 lbs/ft2), Titan Decking (1.6 lbs/ft2), Pressure Treated Lumber (2.5 lbs/ft2)",
-    "Safety factor multiplies total load to get required buoyancy. 1.5=minimum, 2.0=standard residential, 2.5+=commercial.",
-    "",
-    "Current calculator state:",
-    "Frame: " + (frameType || "not selected"),
-    "Decking: " + (deckingType || "not selected"),
-    "Live load: " + (liveLoad || 0) + " lbs",
-    "Safety factor: " + (safetyFactor || "not set"),
-    "Floats selected: " + floatTotals.totalCount,
-    "Total buoyancy: " + floatTotals.totalBuoyancy + " lbs",
-    "Total float weight: " + floatTotals.totalFloatWeight + " lbs",
-    "Total design load: " + results.totalLoad + " lbs",
-    "Required buoyancy: " + results.requiredBuoyancy + " lbs",
-    "Status: " + (results.statusOk ? "Buoyancy sufficient" : "Insufficient buoyancy"),
-    "",
-    "Be concise, friendly, and practical. Always recommend consulting a licensed marine engineer for final structural decisions."
-  ].join("\n");
-
-  const send = async () => {
-    if (!input.trim() || loading) return;
-    const userMsg = { role: "user", content: input.trim() };
-    const updated = [...messages, userMsg];
-    setMessages(updated);
-    setInput("");
-    setLoading(true);
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: getSystem(),
-          messages: updated.map(m => ({ role: m.role, content: m.content })),
-        }),
-      });
-      const data = await res.json();
-      const reply = data.content && data.content[0] ? data.content[0].text : "Sorry, no response received.";
-      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
-    } catch (_) {
-      setMessages(prev => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000 }}>
-      {open && (
-        <div style={{ width: 360, height: 500, background: "#fff", borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.18)", display: "flex", flexDirection: "column", marginBottom: 12, border: "1.5px solid #e2e8f0", overflow: "hidden" }}>
-          <div style={{ background: "#1D587C", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>Flotation Assistant</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>Powered by Shoreline Supply</div>
-            </div>
-            <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 0 }}>x</button>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 8px" }}>
-            {messages.map((m, i) => (
-              <div key={i} style={{ marginBottom: 10, display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
-                <div style={{ maxWidth: "82%", padding: "9px 13px", borderRadius: m.role === "user" ? "14px 14px 2px 14px" : "14px 14px 14px 2px", background: m.role === "user" ? "#1D587C" : "#f1f5f9", color: m.role === "user" ? "#fff" : "#1D587C", fontSize: 13, lineHeight: 1.5 }}>
-                  {m.content}
-                </div>
-              </div>
-            ))}
-            {loading && (
-              <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
-                <div style={{ background: "#f1f5f9", borderRadius: "14px 14px 14px 2px", padding: "9px 14px", fontSize: 13, color: "#1D587C" }}>Thinking...</div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-          <div style={{ padding: "10px 12px", borderTop: "1px solid #e2e8f0", display: "flex", gap: 8 }}>
-            <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()}
-              placeholder="Ask about floats, loads, configuration..."
-              style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1.5px solid #e2e8f0", fontSize: 13, outline: "none", color: "#1D587C" }} />
-            <button onClick={send} disabled={loading || !input.trim()}
-              style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: input.trim() ? "#1D587C" : "#e2e8f0", color: input.trim() ? "#fff" : "#94a3b8", fontWeight: 600, fontSize: 13, cursor: input.trim() ? "pointer" : "default" }}>
-              Send
-            </button>
-          </div>
-        </div>
-      )}
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button onClick={() => setOpen(o => !o)}
-          style={{ width: 56, height: 56, borderRadius: "50%", background: "#1D587C", border: "none", boxShadow: "0 4px 16px rgba(29,88,124,0.4)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#fff" }}>
-          {open ? "x" : "?"}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export default function DockBuoyancyCalculator() {
   const [length, setLength] = useState("");
@@ -548,14 +431,6 @@ export default function DockBuoyancyCalculator() {
           </div>
         </div>
       </div>
-      <AIAssistant
-        results={results}
-        frameType={frameType}
-        deckingType={deckingType}
-        liveLoad={liveLoad}
-        safetyFactor={safetyFactor}
-        floatTotals={floatTotals}
-      />
     </div>
   );
 }
