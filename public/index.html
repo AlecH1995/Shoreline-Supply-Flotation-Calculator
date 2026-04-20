@@ -19,6 +19,7 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
+
 function useMobile() {
   const [mobile, setMobile] = useState(typeof window !== "undefined" && window.innerWidth < 640);
   useEffect(() => {
@@ -201,11 +202,12 @@ function QtyPicker({ items, quantities, onChange, columns }) {
   );
 }
 
+
+
 function DockBuoyancyCalculator() {
   const [length, setLength] = useState("");
   const [width, setWidth] = useState("");
   const [sqft, setSqft] = useState("");
-  const [dimMode, setDimMode] = useState("lw");
   const [frameType, setFrameType] = useState("");
   const [steelQty, setSteelQty] = useState({});
   const [deckingType, setDeckingType] = useState("");
@@ -243,7 +245,8 @@ function DockBuoyancyCalculator() {
   const results = useMemo(() => {
     const l = parseFloat(length) || 0;
     const w = parseFloat(width) || 0;
-    const area = dimMode === "sqft" ? (parseFloat(sqft) || 0) : l * w;
+    const sqftVal = parseFloat(sqft) || 0;
+    const area = sqftVal > 0 ? sqftVal : l * w;
     const frameSpec = frameType && FRAME_TYPES[frameType] ? FRAME_TYPES[frameType] : null;
     const deckSpec = deckingType && DECKING_TYPES[deckingType] ? DECKING_TYPES[deckingType] : null;
     const frameWeight = isSteel ? steelTotalWeight : (frameSpec ? frameSpec.weightPerSqFt * area : 0);
@@ -258,11 +261,13 @@ function DockBuoyancyCalculator() {
     const netCapacity = actualBuoyancy - totalDeadLoad;
     const statusOk = requiredBuoyancy > 0 && actualBuoyancy >= requiredBuoyancy;
     const subPct = actualBuoyancy > 0 ? Math.min((totalLoad / actualBuoyancy) * 100, 100).toFixed(1) : "0.0";
+    const freeboardPct = (Math.max(100 - parseFloat(subPct === "0.0" ? 100 : subPct), 0)).toFixed(1);
     const submergedByModel = FLOAT_CATALOG
       .filter(f => (floatQty[f.sku] || 0) > 0)
       .map(f => ({
         sku: f.sku, size: f.size, depth: f.depth, qty: floatQty[f.sku] || 0,
         subIn: actualBuoyancy > 0 ? ((totalLoad / actualBuoyancy) * f.depth).toFixed(1) : "0.0",
+        freeIn: actualBuoyancy > 0 ? Math.max(f.depth - (totalLoad / actualBuoyancy) * f.depth, 0).toFixed(1) : f.depth.toFixed(1),
       }));
     return {
       area, frameWeight: Math.round(frameWeight), deckWeight: Math.round(deckWeight),
@@ -270,10 +275,10 @@ function DockBuoyancyCalculator() {
       totalDeadLoad: Math.round(totalDeadLoad), totalLiveLoad: Math.round(ll),
       totalLoad: Math.round(totalLoad), requiredBuoyancy: Math.round(requiredBuoyancy),
       actualBuoyancy: Math.round(actualBuoyancy), netCapacity: Math.round(netCapacity),
-      subPct, submergedByModel, statusOk,
+      subPct, freeboardPct, submergedByModel, statusOk,
       margin: Math.round(actualBuoyancy - requiredBuoyancy),
     };
-  }, [length, width, sqft, dimMode, frameType, isSteel, steelTotalWeight, deckingType, hardwareWeight, liveLoad, safetyFactor, floatTotals, floatQty]);
+  }, [length, width, sqft, frameType, isSteel, steelTotalWeight, deckingType, hardwareWeight, liveLoad, safetyFactor, floatTotals, floatQty]);
 
   const statusColor = results.statusOk ? "#16a34a" : "#dc2626";
   const statusBg = results.statusOk ? "#dcfce7" : "#fee2e2";
@@ -282,12 +287,12 @@ function DockBuoyancyCalculator() {
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", background: "#f1f5f9", minHeight: "100vh", padding: isMobile ? "16px 10px" : "24px 16px" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 800, color: C }}>Shoreline Supply Flotation Calculator</div>
-          <p style={{ color: C, fontSize: 13, marginTop: 6 }}>Estimate float requirements and load capacity for your floating dock system.</p>
-        </div>
+
+
+
         <div style={{ display: "flex", gap: isMobile ? 12 : 20, flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 320px", minWidth: isMobile ? "100%" : 320, display: "flex", flexDirection: "column", gap: 12 }}>
+
             <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Frame & Decking</h3>
               <SelectRow label="Frame Type" value={frameType} onChange={setFrameType} options={Object.keys(FRAME_TYPES)} />
@@ -314,33 +319,29 @@ function DockBuoyancyCalculator() {
               )}
               <InputRow label="Hardware & Misc. Weight" value={hardwareWeight} onChange={setHardwareWeight} unit="lbs" min={0} note="cleats, ladders, lights" />
             </div>
+
             {(frameType === "Wood Framing" || frameType === "Aluminium Frame") && (
               <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Dock Dimensions</h3>
-                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                  {["lw", "sqft"].map(mode => (
-                    <button key={mode} onClick={() => setDimMode(mode)}
-                      style={{ flex: 1, padding: "7px 10px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", border: "1.5px solid", background: dimMode === mode ? C : "#f8fafc", color: dimMode === mode ? "#fff" : C, borderColor: dimMode === mode ? C : "#e2e8f0" }}>
-                      {mode === "lw" ? "Length & Width" : "Total Sq. Footage"}
-                    </button>
-                  ))}
+                <h3 style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Dock Dimensions</h3>
+                <p style={{ fontSize: 12, color: C, margin: "0 0 14px" }}>Enter length & width, or total square footage — whichever you know.</p>
+                <InputRow label="Length" value={length} onChange={setLength} unit="ft" min={4} max={200} />
+                <InputRow label="Width" value={width} onChange={setWidth} unit="ft" min={2} max={50} />
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+                  <span style={{ fontSize: 11, color: C, fontWeight: 600 }}>OR</span>
+                  <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
                 </div>
-                {dimMode === "lw" ? (
-                  <>
-                    <InputRow label="Length" value={length} onChange={setLength} unit="ft" min={4} max={200} />
-                    <InputRow label="Width" value={width} onChange={setWidth} unit="ft" min={2} max={50} />
-                  </>
-                ) : (
-                  <InputRow label="Total Square Footage" value={sqft} onChange={setSqft} unit="ft²" min={1} />
-                )}
+                <InputRow label="Total Square Footage" value={sqft} onChange={setSqft} unit="ft²" min={1} />
                 <InfoBox>Deck area: <strong>{results.area} ft²</strong></InfoBox>
               </div>
             )}
+
             <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Loads</h3>
               <InputRow label="Live Load" value={liveLoad} onChange={setLiveLoad} unit="lbs" min={0} note="total weight of people, permanent fixtures, equipment" />
               <InputRow label="Safety Factor" value={safetyFactor} onChange={setSafetyFactor} unit="x" min={1.5} max={4} step={0.1} note="typically 1.5-2.5" />
             </div>
+
             <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
               <h3 style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Permafloat Dock Floats</h3>
               <p style={{ fontSize: 12, color: C, margin: "0 0 14px" }}>Select depth series, then enter quantity for each model.</p>
@@ -376,21 +377,13 @@ function DockBuoyancyCalculator() {
                 <InfoBox warn>No floats selected — add floats above to calculate buoyancy.</InfoBox>
               )}
             </div>
+
           </div>
+
           <div style={{ flex: "1 1 280px", minWidth: isMobile ? "100%" : 280 }}>
             <div style={{ position: isMobile ? "static" : "sticky", top: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ background: statusBg, border: "2px solid " + statusColor, borderRadius: 14, padding: "16px 20px", textAlign: "center" }}>
-                <div style={{ fontSize: 28 }}>{results.statusOk ? "✅" : "⚠️"}</div>
-                <div style={{ fontWeight: 800, fontSize: 18, color: statusColor, marginTop: 4 }}>
-                  {results.statusOk ? "Buoyancy Sufficient" : "Insufficient Buoyancy"}
-                </div>
-                <div style={{ fontSize: 13, color: statusColor, marginTop: 4 }}>
-                  {results.statusOk
-                    ? results.margin.toLocaleString() + " lbs of margin above required"
-                    : "Need " + Math.abs(results.margin).toLocaleString() + " more lbs of buoyancy"}
-                </div>
-              </div>
-              <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+
+<div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Load Summary</h3>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                   <ResultCard label="Frame Weight"      value={results.frameWeight.toLocaleString()}   unit="lbs" color="#6366f1" />
@@ -401,13 +394,21 @@ function DockBuoyancyCalculator() {
                   <ResultCard label="Total Design Load" value={results.totalLoad.toLocaleString()}     unit="lbs" color="#ef4444" />
                 </div>
               </div>
+
               <div style={{ background: "#fff", borderRadius: 14, padding: isMobile ? "14px 14px" : "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Buoyancy Summary</h3>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C, textTransform: "uppercase", letterSpacing: 1 }}>Buoyancy Summary</h3>
+                  <div style={{ background: statusBg, borderRadius: 6, padding: "4px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 13 }}>{results.statusOk ? "✅" : "⚠️"}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: statusColor }}>{results.statusOk ? "Buoyancy Sufficient" : "Insufficient Buoyancy"}</span>
+                  </div>
+                </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                   <ResultCard label="Required Buoyancy" value={results.requiredBuoyancy.toLocaleString()} unit="lbs" color="#f97316" />
                   <ResultCard label="Actual Buoyancy"   value={results.actualBuoyancy.toLocaleString()}   unit="lbs" color="#16a34a" highlight={results.statusOk} />
                   <ResultCard label="Net Capacity"      value={results.netCapacity.toLocaleString()}      unit="lbs" color="#3b82f6" />
                 </div>
+
                 <div style={{ marginTop: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, color: C, marginBottom: 6 }}>
                     <span>Float Submersion at Design Load</span>
@@ -421,21 +422,45 @@ function DockBuoyancyCalculator() {
                       : subFloat <= 100 ? "⚠️ Near capacity — consider adding floats or reducing load"
                       : "❌ Over capacity — floats will fully submerge under this load"}
                   </div>
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, color: C, marginBottom: 6 }}>
+                      <span>Freeboard (above waterline)</span>
+                      <span style={{ color: "#16a34a" }}>{results.freeboardPct}%</span>
+                    </div>
+                    <div style={{ background: "#e2e8f0", borderRadius: 999, height: 12, overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 999, width: Math.min(parseFloat(results.freeboardPct), 100) + "%", background: "#22c55e", transition: "width 0.3s ease" }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: C, marginTop: 5 }}>
+                      See per-model breakdown below for freeboard in inches
+                    </div>
+                  </div>
                 </div>
+
                 {results.submergedByModel.length > 0 && (
                   <div style={{ marginTop: 14 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C, marginBottom: 8 }}>Submerged Depth by Float Model</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C, marginBottom: 8 }}>Submerged & Freeboard by Float Model</div>
                     {results.submergedByModel.map(m => {
-                      const pct = Math.min((parseFloat(m.subIn) / m.depth) * 100, 100);
-                      const bc = pct > 100 ? "#dc2626" : pct > 80 ? "#f97316" : "#3b82f6";
+                      const subPct = Math.min((parseFloat(m.subIn) / m.depth) * 100, 100);
+                      const freePct = Math.min((parseFloat(m.freeIn) / m.depth) * 100, 100);
+                      const bc = subPct > 100 ? "#dc2626" : subPct > 80 ? "#f97316" : "#3b82f6";
                       return (
-                        <div key={m.sku} style={{ marginBottom: 10 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C, marginBottom: 3 }}>
-                            <span><strong>{m.sku}</strong> <span>({m.size}, x{m.qty})</span></span>
-                            <span style={{ fontWeight: 700, color: bc }}>{m.subIn}" / {m.depth}"</span>
+                        <div key={m.sku} style={{ marginBottom: 14 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: C, marginBottom: 6 }}>
+                            {m.sku} <span style={{ fontWeight: 400 }}>({m.size}, x{m.qty})</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C, marginBottom: 3 }}>
+                            <span>Submerged</span>
+                            <span style={{ fontWeight: 700, color: bc }}>{m.subIn}"</span>
+                          </div>
+                          <div style={{ background: "#e2e8f0", borderRadius: 999, height: 8, overflow: "hidden", marginBottom: 6 }}>
+                            <div style={{ height: "100%", borderRadius: 999, width: subPct + "%", background: bc, transition: "width 0.3s ease" }} />
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C, marginBottom: 3 }}>
+                            <span>Freeboard</span>
+                            <span style={{ fontWeight: 700, color: "#16a34a" }}>{m.freeIn}"</span>
                           </div>
                           <div style={{ background: "#e2e8f0", borderRadius: 999, height: 8, overflow: "hidden" }}>
-                            <div style={{ height: "100%", borderRadius: 999, width: pct + "%", background: bc, transition: "width 0.3s ease" }} />
+                            <div style={{ height: "100%", borderRadius: 999, width: freePct + "%", background: "#22c55e", transition: "width 0.3s ease" }} />
                           </div>
                         </div>
                       );
@@ -443,9 +468,11 @@ function DockBuoyancyCalculator() {
                   </div>
                 )}
               </div>
+
               <div style={{ fontSize: 11, color: C, background: "#f8fafc", borderRadius: 10, padding: "10px 14px", border: "1px solid #e2e8f0" }}>
                 Buoyancy figures are maximums assuming complete submersion per Permafloat specifications. Consult a licensed marine engineer for final design.
               </div>
+
             </div>
           </div>
         </div>
@@ -454,14 +481,17 @@ function DockBuoyancyCalculator() {
   );
 }
 
+
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(React.createElement(DockBuoyancyCalculator));
   </script>
+
 <script>
   function reportHeight() {
     var height = document.body.scrollHeight;
     window.parent.postMessage({ iframeHeight: height }, '*');
   }
+  // Report on load and whenever DOM changes
   window.addEventListener('load', reportHeight);
   var observer = new MutationObserver(reportHeight);
   observer.observe(document.body, { childList: true, subtree: true, attributes: true });
